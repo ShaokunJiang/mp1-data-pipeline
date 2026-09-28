@@ -1,12 +1,22 @@
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyc
+# OS files
+.DS_Store
+desktop.ini
+Thumbs.db
 
-# IDE
+# Data files
+*.csv
+*.txt
+!requirements.txt
+data/
+
+*.md
+# Python caches & virtual envs
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE settings & Secrets
 .vscode/
 .idea/
-
-# OS
-.DS_Store
-Thumbs.db
+.env
