@@ -34,6 +34,8 @@ def remove_outliers(df, columns, method, threshold):
         logger.error(f"Unsupported outlier method: {method}")
         raise ValueError(f"Unsupported outlier method: {method}")
 
+    rows_before = len(df)
+
     for col in columns:
         if col not in df.columns:
             logger.warning(f"Column not found: {col}")
@@ -43,22 +45,24 @@ def remove_outliers(df, columns, method, threshold):
             logger.warning(f"Column is not numeric: {col}")
             continue
 
-    if method == 'iqr':
-      q1 = df[columns].quantile(.25)
-      q3 = df[columns].quantile(.75)
-      iqr = q3-q1
-      lower = q1 -threshold *iqr
-      upper = q3 + threshold *iqr
-      remov_outlier = df[(df[columns]>=lower)&(df[columns]<=upper)]
-    
-    elif method == 'zscore':
-      mean = df[columns].mean()
-      std = df[columns].std()
-      z_score = (df[columns]-mean)/std
-      remov_outlier = df[z_score.abs() <=threshold]
+        if method == 'iqr':
+            q1 = df[col].quantile(0.25)  
+            q3 = df[col].quantile(0.75)  
+            iqr = q3 - q1
+            lower = q1 - threshold * iqr
+            upper = q3 + threshold * iqr
+            df = df[(df[col] >= lower) & (df[col] <= upper)] 
+        
+        elif method == 'zscore':
+            mean = df[col].mean()     
+            std = df[col].std()         
+            if std == 0 or pd.isna(std):
+                continue
+            z_score = (df[col] - mean) / std
+            df = df[z_score.abs() <= threshold]  
 
-    logger.debug(f"remove_outliers ({method}, threshold={threshold}): removed {len(df)-len(remov_outlier)} row(s)")
-    return remov_outlier
+    logger.debug(f"remove_outliers ({method}, threshold={threshold}): removed {rows_before - len(df)} row(s)")
+    return df  
 
 
 def process_data(df, config):
