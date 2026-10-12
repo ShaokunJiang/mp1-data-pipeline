@@ -1,59 +1,39 @@
-# Starter Code
 """
 Data Processing Pipeline - CLI Template
 
 DS 3500 - MP1
 
 Usage:
-    python pipeline.py --input data.csv --output clean.csv
-    python pipeline.py --input data.csv --output results.json --format json --verbose
+    python pipeline.py --input data.csv --output clean.csv --config config/config.yaml --verbose
 """
 import argparse
 import logging
 import sys
 from pathlib import Path
-from data_loaders import load_data
-from data_processor import process_data, create_cleaning_report
+
+from src import (
+    create_cleaning_report,
+    load_data,
+    process_data,
+    save_data,
+    setup_logging,
+    validate_dataframe,
+    validate_input,
+)
 
 logger = logging.getLogger(__name__)
 
-
-
-def setup_logging(verbose=False):
-    """Configure logging for the pipeline."""
-    if verbose:
-       logger_level= logging.DEBUG
-    else:
-       logger_level = logging.INFO
-
-    logging.basicConfig(
-      level = logger_level,
-      format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
-      datefmt="%H:%M:%S"
-    )
 
 def parse_arguments():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description='Data Processing Pipeline - CLI')
 
-    parser.add_argument('--input','-i',required=True, help='Path to the input file')
+    parser.add_argument('--input', '-i', required=True, help='Path to the input file')
     parser.add_argument("--config", required=True, help="Path to configuration YAML file")
     parser.add_argument('--output', '-o', required=True, help='Path to the output file')
-    parser.add_argument('--verbose', '-v', action= 'store_true',help= 'Enable verbose logging')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
 
     return parser.parse_args()
-
-
-def validate_input(filepath):
-    """Check whether the input path exists and is a file."""
-    path = Path(filepath)
-
-    if path.is_file():
-        logger.info(f"Input file validated: {filepath}")
-        return True
-    else:
-        logger.error(f"Input file not found: {filepath}")
-        return False
 
 
 def main():
@@ -63,16 +43,11 @@ def main():
     setup_logging(args.verbose)
     logger.debug(f"Arguments parsed: input = {args.input}, output = {args.output}, config = {args.config}")
 
-
     if not validate_input(args.input):
-        logger.error(f"Input file not found: {args.input}")
         sys.exit(1)
-    logger.info(f"Input file validated: {args.input}")
 
     if not validate_input(args.config):
-        logger.error(f"Input file not found: {args.config}")
         sys.exit(1)
-    logger.info(f"Input file validated: {args.config}")
 
     try:
         data = load_data(args.input)
@@ -80,23 +55,37 @@ def main():
     except ValueError:
         sys.exit(1)
 
-    df_before = data.copy()
+    validation_config = config.get("validation", {})
+    required_columns = validation_config.get("required_columns", [])
+    numeric_columns = validation_config.get("numeric_columns", [])
 
+    rows_before_validation = len(data)
+
+    try:
+        data = validate_dataframe(data, required_columns, numeric_columns)
+    except ValueError:
+        sys.exit(1)
+
+    rows_after_validation = len(data)
+    logger.info(f"Validation complete: {rows_before_validation} -> {rows_after_validation} rows")
+
+    df_before_processing = data.copy()
 
     try:
         data = process_data(data, config)
     except ValueError:
         sys.exit(1)
 
+    report = create_cleaning_report(df_before_processing, data)
 
-    report = create_cleaning_report(df_before, data)
+    logger.info(f"Processing complete: {report['rows_before']} -> {report['rows_after']} rows")
+    
+    save_data(data, args.output)
+    logger.info(f"Saved cleaned data to {args.output}")
+
+    print("\nCleaning report:")
     print(report)
 
-    logger.info(f"Processing complete: {report['rows_before']} → {report['rows_after']} rows")
-    
-    data.to_csv(args.output, index=False)
-    logger.info(f"Saved cleaned data to {args.output}")
 
 if __name__ == "__main__":
     main()
-

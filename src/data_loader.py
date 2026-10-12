@@ -14,7 +14,7 @@ def load_csv(filepath):
     """Load a CSV file into a DataFrame.
     filepath is a Path object.
     """
-    data = pd.read_csv(filepath, sep='\t')
+    data = pd.read_csv(filepath, sep=',')
     logger.info(f'Loaded CSV file: {filepath} ({len(data)} rows)')
     return data
 
@@ -42,13 +42,14 @@ def load_data(filepath):
     filepath is a string, such as 'fixtures/sample.csv'
     """
     path = Path(filepath)
+    
     exat = path.suffix.lower()
 
     if exat == '.csv':
         return load_csv(path)
     elif exat == '.json':
         return load_json(path)
-    elif exat == '.yaml':
+    elif exat == '.yaml': 
         return load_yaml(path)
     else:
         logger.error(f'Unsupported file format: {exat}')
